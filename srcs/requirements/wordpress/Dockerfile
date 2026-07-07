@@ -1,25 +1,22 @@
 FROM debian:bullseye
 
-RUN apt-get update && apt-get install -y \
-    php \
-    php-fpm \
-    php-mysql \
-    php-cli \
-    curl \
-    mariadb-client \
-    tar \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    php7.4-fpm php7.4-mysql php7.4-mbstring php7.4-xml php7.4-gd php7.4-redis \
+    curl ca-certificates mariadb-client \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /run/php
 
-# Install wp-cli
 RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
-    && chmod +x wp-cli.phar \
-    && mv wp-cli.phar /usr/local/bin/wp
+    && chmod +x wp-cli.phar && mv wp-cli.phar /usr/local/bin/wp
+
+COPY conf/www.conf /etc/php/7.4/fpm/pool.d/www.conf
+
+COPY tools/init.sh /init.sh
+RUN chmod +x /init.sh
 
 WORKDIR /var/www/html
 
-COPY tools/step.sh /step.sh
+EXPOSE 9000
 
-RUN chmod +x /step.sh
-
-CMD ["/step.sh"]
+ENTRYPOINT ["/init.sh"]
+CMD ["php-fpm7.4", "-F"]

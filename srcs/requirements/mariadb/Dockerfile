@@ -1,9 +1,16 @@
 FROM debian:bullseye
 
-RUN apt-get update && apt-get install -y mariadb-server
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    mariadb-server \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /run/mysqld \
+    && chown mysql:mysql /run/mysqld
 
-COPY tools/init.sh /init.sh
+COPY conf/50-server.conf /etc/mysql/mariadb.conf.d/50-server.cnf
 
-RUN chmod +x /init.sh
+COPY tools/init.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
-CMD ["/init.sh"]
+EXPOSE 3306
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
