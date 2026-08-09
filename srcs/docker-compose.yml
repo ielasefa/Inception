@@ -13,7 +13,6 @@ services:
       - inception
     restart: unless-stopped
 
-
   wordpress:
     build: ./requirements/wordpress
     container_name: wordpress
@@ -53,6 +52,62 @@ services:
       - inception
     restart: unless-stopped
 
+  redis:
+    build: ./requirements/bonus/redis
+    container_name: redis
+    volumes:
+    - redis_data:/data
+    networks:
+      - inception
+    restart: unless-stopped
+
+  ftp:
+    build:
+      context: ./requirements/bonus/ftp
+    container_name: ftp
+    environment:
+      FTP_USER: ${FTP_USER}
+      FTP_PASSWORD: ${FTP_PASSWORD}
+    ports:
+      - "21:21"
+      - "21000-21010:21000-21010"
+    volumes:
+      - wordpress_data:/var/www/html
+    networks:
+      - inception
+    restart: unless-stopped
+
+  adminer:
+    build: ./requirements/bonus/adminer
+    container_name: adminer
+    ports:
+      - "8080:8080"
+    networks:
+      - inception
+    restart: unless-stopped
+
+  static:
+    build:
+      context: ./requirements/bonus/static
+    container_name: static
+    ports:
+      - "8081:80"
+    networks:
+      - inception
+    restart: unless-stopped
+
+  uptime-kuma:
+    build:
+      context: ./requirements/bonus/uptime-kuma
+    container_name: uptime-kuma
+    ports:
+      - "3001:3001"
+    volumes:
+      - uptime_kuma_data:/app/data
+    networks:
+      - inception
+    restart: unless-stopped
+
 volumes:
   mariadb_data:
     driver: local
@@ -66,6 +121,9 @@ volumes:
       type: none
       o: bind
       device: /home/iel-asef/data/wordpress
+  redis_data:
+  uptime_kuma_data:
+    driver: local
 
 networks:
   inception:
