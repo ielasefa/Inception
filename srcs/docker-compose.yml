@@ -3,10 +3,10 @@ services:
     build: ./requirements/mariadb
     container_name: mariadb
     environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     volumes:
       - mariadb_data:/var/lib/mysql
     networks:
@@ -18,6 +18,7 @@ services:
     container_name: wordpress
     depends_on:
       - mariadb
+      - redis
     environment:
       MYSQL_HOST: mariadb
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -30,12 +31,13 @@ services:
       WP_USER_USER: ${WP_USER_USER}
       WP_USER_PASS: ${WP_USER_PASS}
       WP_USER_EMAIL: ${WP_USER_EMAIL}
+      REDIS_HOST: redis
     volumes:
       - wordpress_data:/var/www/html
     networks:
       - inception
     restart: unless-stopped
-    
+
   nginx:
     build:
       context: ./requirements/nginx
@@ -52,27 +54,30 @@ services:
       - inception
     restart: unless-stopped
 
+  # Bonus services
   redis:
     build: ./requirements/bonus/redis
     container_name: redis
     volumes:
-    - redis_data:/data
+      - redis_data:/data
     networks:
       - inception
     restart: unless-stopped
 
   ftp:
-    build:
-      context: ./requirements/bonus/ftp
+    build: ./requirements/bonus/ftp
     container_name: ftp
+    depends_on:
+      - wordpress
     environment:
       FTP_USER: ${FTP_USER}
       FTP_PASSWORD: ${FTP_PASSWORD}
+      FTP_ROOT: /var/www/html
+    volumes:
+      - wordpress_data:/var/www/html
     ports:
       - "21:21"
       - "21000-21010:21000-21010"
-    volumes:
-      - wordpress_data:/var/www/html
     networks:
       - inception
     restart: unless-stopped
@@ -80,8 +85,10 @@ services:
   adminer:
     build: ./requirements/bonus/adminer
     container_name: adminer
+    depends_on:
+      - mariadb
     ports:
-      - "8080:8080"
+      - "8082:8082"
     networks:
       - inception
     restart: unless-stopped
@@ -89,6 +96,7 @@ services:
   static:
     build:
       context: ./requirements/bonus/static
+      dockerfile: dockerfile
     container_name: static
     ports:
       - "8081:80"
@@ -97,13 +105,12 @@ services:
     restart: unless-stopped
 
   uptime-kuma:
-    build:
-      context: ./requirements/bonus/uptime-kuma
+    build: ./requirements/bonus/uptime-kuma
     container_name: uptime-kuma
-    ports:
-      - "3001:3001"
     volumes:
       - uptime_kuma_data:/app/data
+    ports:
+      - "3001:3001"
     networks:
       - inception
     restart: unless-stopped
@@ -114,16 +121,25 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: /home/iel-asef/data/mariadb
+      device: ${DATA_PATH}/mariadb
   wordpress_data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: /home/iel-asef/data/wordpress
+      device: ${DATA_PATH}/wordpress
   redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_PATH}/redis
   uptime_kuma_data:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_PATH}/uptime-kuma
 
 networks:
   inception:

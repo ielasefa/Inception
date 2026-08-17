@@ -1,27 +1,21 @@
 #!/bin/bash
-
 set -e
 
-echo "Checking MariaDB directory permissions..."
 chown -R mysql:mysql /var/lib/mysql
 
 if [ ! -f "/var/lib/mysql/.initialized" ]; then
-    echo "Initializing MariaDB for the first time..."
+    echo "Initializing MariaDB..."
     
     if [ ! -d "/var/lib/mysql/mysql" ]; then
-        mariadb-install-db --user=mysql --datadir=/var/lib/mysql
+        mysql_install_db --user=mysql --datadir=/var/lib/mysql
     fi
 
-    mariadbd --user=mysql --skip-networking &
+    mysqld --user=mysql &
     pid=$!
     
-    echo "Waiting for MariaDB daemon to start..."
-    while ! mariadb-admin ping -h localhost --silent 2>/dev/null; do 
-        sleep 1
-    done
+    while ! mysqladmin ping -h localhost --silent 2>/dev/null; do sleep 1; done
 
-    echo "Creating database and users..."
-    mariadb -u root <<EOF
+    mysql -u root <<EOF
 CREATE DATABASE IF NOT EXISTS \`${MYSQL_DATABASE}\`;
 CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
 GRANT ALL PRIVILEGES ON \`${MYSQL_DATABASE}\`.* TO '${MYSQL_USER}'@'%';
@@ -30,12 +24,10 @@ FLUSH PRIVILEGES;
 EOF
 
     touch /var/lib/mysql/.initialized
-    echo "MariaDB initialization finished successfully."
+    echo "MariaDB initialized."
     
-    mariadb-admin -u root -p"${MYSQL_ROOT_PASSWORD}" shutdown
+    kill $pid 2>/dev/null || true
     wait $pid 2>/dev/null || true
 fi
 
-echo "Starting MariaDB in foreground (PID 1)..."
-
-exec mariadbd --user=mysql
+exec mysqld --user=mysql

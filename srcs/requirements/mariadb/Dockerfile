@@ -7,10 +7,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && chown mysql:mysql /run/mysqld
 
 COPY conf/50-server.conf /etc/mysql/mariadb.conf.d/50-server.cnf
-
-COPY tools/init.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+COPY tools/init.sh /usr/local/bin/init.sh
+RUN chmod +x /usr/local/bin/init.sh
 
 EXPOSE 3306
 
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/init.sh"]
+CMD ["mariadbd", "--user=mysql"]
